@@ -28,9 +28,9 @@ nixt.mkSuite "lexer" {
       file = ''
         opam-version: "2.0"
         synopsis: "opam-monorepo generated lockfile"
-        maintainer: "opam-monorepo"
+        maintainer: "opam-monorepo" (* comment *)
         depends: [
-          "base-bigarray" {= "base"}
+          "base-bigarray" {= "base"} # line comment
           "base-threads" {= "base"}
           "base-unix" {= "base"}
           "dune" {= "3.4.1"}

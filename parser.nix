@@ -1,7 +1,6 @@
 { lib }:
 let
-  inherit (builtins) elem stringLength substring head tail length
-    concatLists;
+  inherit (builtins) elem stringLength substring head tail length;
   inherit (lib.strings) lowerChars upperChars stringToCharacters;
   inherit (lib.lists) foldl;
 in
@@ -119,7 +118,7 @@ rec {
     in
     continue initial inp;
 
-  pManyList = pManyGeneric (a: b: concatLists [ a [ b ] ]) [ ];
+  pManyList = pManyGeneric (a: b: a ++ [ b ]) [ ];
 
   pManySp = pManyGeneric catSp (sp 0 0);
 
@@ -175,7 +174,7 @@ rec {
     in
     continue ps initial inp;
 
-  pSeqList = pSeqGeneric (a: b: concatLists [ a [ b ] ]) [ ];
+  pSeqList = pSeqGeneric (a: b: a ++ [ b ]) [ ];
 
   pSeqStr = pSeqGeneric (a: b: a + b) "";
 
