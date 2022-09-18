@@ -1,6 +1,6 @@
 { lib }:
 let
-  inherit (builtins) elem stringLength substring head tail length;
+  inherit (builtins) elem elemAt stringLength substring head tail length;
   inherit (lib.strings) lowerChars upperChars stringToCharacters;
   inherit (lib.lists) foldl;
 in
@@ -190,7 +190,7 @@ rec {
   isAlpha = c: elem c lowerChars || elem c upperChars;
   isDigit = c: elem c (stringToCharacters "0123456789");
 
-  pBetween = p1: p2: p3: pMap (ls: elem 1 ls)
+  pBetween = p1: p2: p3: pMap (ls: elemAt ls 1)
     (pSeqList [
       p1
       p2

@@ -1,6 +1,6 @@
 { lib }:
 let
-  inherit (builtins) length elem;
+  inherit (builtins) length elemAt;
   inherit (import ./parser.nix { inherit lib; }) success failure pChoose pOr pBetween pSeqList pMap pManyList;
   inherit (import ./lexer.nix { inherit lib; }) tokenStream;
 
@@ -33,39 +33,40 @@ let
     (pMap (items: { t = "LIST"; inherit items; })
       (pBetween (pTokenType "LBRACKET") pValues (pTokenType "RBRACKET")))
 
-    # LEFT RECURSION LOL
-    (pMap (items: { t = "OPTION"; v = elem 0 items; options = elem 2 items; })
-      (pSeqList [ pValue (pTokenType "LBRACE") pValues (pTokenType "RBRACE") ]))
-
-    (pMap (items: { t = "LOGOP"; l = elem 0 items; r = elem 2 items; })
-      (pSeqList [ pValue (pOr (pTokenType "AND") (pTokenType "OR")) pValue ]))
-
-    (pMap (items: { t = (elem 1 items).t; l = elem 0 items; r = elem 2 items; })
-      (pSeqList [ pValue (pOr (pTokenType "RELOP") (pTokenType "ENVOP")) pValue ]))
-
-    (pMap (items: { t = "PFXOP"; v = elem 1 items; })
+    (pMap (items: { t = "PFXOP"; v = elemAt items 1; })
       (pSeqList [ (pTokenType "PFXOP") pValue ]))
 
-    (pMap (items: { t = "RELOP"; v = elem 1 items; })
+    (pMap (items: { t = "RELOP"; v = elemAt items 1; })
       (pSeqList [ (pTokenType "RELOP") pAtom ]))
+
+    # LEFT RECURSION LOL
+    # (pMap (items: { t = "OPTION"; v = elemAt items 0; options = elemAt items 2; })
+    #   (pSeqList [ pValue (pTokenType "LBRACE") pValues (pTokenType "RBRACE") ]))
+
+    # (pMap (items: { t = "LOGOP"; l = elemAt items 0; r = elemAt items 2; })
+    #   (pSeqList [ pValue (pOr (pTokenType "AND") (pTokenType "OR")) pValue ]))
+
+    # (pMap (items: { t = (elemAt items 1).t; l = elemAt items 0; r = elemAt items 2; })
+    #   (pSeqList [ pValue (pOr (pTokenType "RELOP") (pTokenType "ENVOP")) pValue ]))
+
   ];
 
   pValues = pManyList pValue;
 
   pItem = pChoose [
-    (pMap (items: { t = "VARIABLE"; name = (elem 0 items).v; v = elem 2 items; })
+    (pMap (items: { t = "VARIABLE"; name = (elemAt items 0).v; v = elemAt items 2; })
       (pSeqList [ (pTokenType "IDENT") (pTokenType "COLON") pValue ]))
 
-    (pMap (items: { t = "SECTION"; kind = (elem 0 items).v; name = null; items = elem 2 items; })
+    (pMap (items: { t = "SECTION"; kind = (elemAt items 0).v; name = null; items = elemAt items 2; })
       (pSeqList [ (pTokenType "IDENT") (pTokenType "LBRACE") pItems (pTokenType "RBRACE") ]))
 
-    (pMap (items: { t = "SECTION"; kind = (elem 0 items).v; name = (elem 1 items).v; items = elem 3 items; })
+    (pMap (items: { t = "SECTION"; kind = (elemAt items 0).v; name = (elemAt items 1).v; items = elemAt items 3; })
       (pSeqList [ (pTokenType "IDENT") (pTokenType "STRING") (pTokenType "LBRACE") pItems (pTokenType "RBRACE") ]))
   ];
 
   pItems = pManyList pItem;
 
-  pOpamFile = pMap (items: elem 0 items) (pSeqList [ pItems (pTokenType "EOF") ]);
+  pOpamFile = pMap (items: elemAt items 0) (pSeqList [ pItems (pTokenType "EOF") ]);
   
   run = p: str: p (tokenStream { buf = str; pos = 0; });
 in
