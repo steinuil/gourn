@@ -42,7 +42,7 @@ let
 
   pStringInner = pMap concatStrings (pManyList (pOr pStringNoEscape pEscaped));
 in
-{
+rec {
   pOpamStringSingle = pMap (xs: elemAt xs 1)
     (pSeqList [
       (pCharSp "\"")
@@ -56,4 +56,6 @@ in
       (pOption "" pStringInner)
       (pStringStr "\"\"\"")
     ]);
+
+  pOpamString = pChoose [ pOpamStringTriple pOpamStringSingle ];
 }

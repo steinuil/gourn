@@ -1,7 +1,7 @@
 { lib }:
 with (import ./parser.nix { inherit lib; });
 let
-  inherit (builtins) elem;
+  inherit (builtins) elem substring;
   inherit (lib.strings) lowerChars upperChars stringToCharacters;
 
   isDash = c: c == "_" || c == "-";
@@ -24,11 +24,13 @@ let
   pPlusId = pSeqSp [ (pCharSp "+") pIdOrUnderscore ];
 
   pColonId = pSeqSp [ (pCharSp ":") pId ];
-in
-{
-  pIdent = pSeqSp [
+
+  pIdentSp = pSeqSp [
     pIdOrUnderscore
     (pManySp pPlusId)
     (pOptionSp pColonId)
   ];
+in
+{
+  pIdent = inp: pMap ({ start, len }: substring start len inp.buf) pIdentSp inp;
 }

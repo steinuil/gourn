@@ -66,14 +66,30 @@ rec {
       success c (advance 1 inp)
     else
       failure "char not satisfactory" inp;
-  
+
   pSatisfiesLengthStr = n: cond: inp:
     let str = substring inp.pos n inp.buf; in
     if cond str then
       success str (advance n inp)
     else
       failure "char not satisfactory" inp;
-  
+
+  pStringOneOfStr = strs: inp:
+    let continue = strs:
+      if length strs == 0 then
+        failure "none matched" inp
+      else
+        let
+          str = (head strs);
+          len = stringLength str;
+        in
+        if substring inp.pos len inp.buf == str then
+          success str (advance len inp)
+        else
+          continue (tail strs);
+    in
+    continue strs;
+
   pStringWhileSp = cond: condName: inp:
     let
       start = inp.pos;
@@ -87,7 +103,7 @@ rec {
           else success (sp start len) inp;
     in
     continue inp;
-  
+
   pStringWhileStr = cond: condName: inp:
     pMap ({ start, len }: substring start len inp.buf) (pStringWhileSp cond condName) inp;
 
@@ -106,6 +122,11 @@ rec {
   pManyList = pManyGeneric (a: b: concatLists [ a [ b ] ]) [ ];
 
   pManySp = pManyGeneric catSp (sp 0 0);
+
+  pManyStr = pManyGeneric (a: b: a + b) "";
+
+  pMany1Str = ps: pBind (v: if v == "" then failure "" else success v)
+    (pManyStr ps);
 
   pOr = p1: p2: inp:
     let res = p1 inp; in
@@ -134,7 +155,7 @@ rec {
 
   pOptionSp = p: inp: pOption (sp inp.pos 0) p inp;
 
-  pBind = p: f: inp:
+  pBind = f: p: inp:
     let res = p inp; in
     if res.isOk then f res.v res.inp else res;
 
@@ -169,4 +190,11 @@ rec {
 
   isAlpha = c: elem c lowerChars || elem c upperChars;
   isDigit = c: elem c (stringToCharacters "0123456789");
+
+  pBetween = p1: p2: p3: pMap (ls: elem 1 ls)
+    (pSeqList [
+      p1
+      p2
+      p3
+    ]);
 }

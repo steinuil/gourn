@@ -4,7 +4,7 @@ let
   run = p: str:
     let result = p { buf = str; pos = 0; }; in
     if !result.isOk then null else
-    builtins.substring result.v.start result.v.len str;
+    result.v;
 
   matches = p: str: run p str == str;
 
