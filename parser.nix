@@ -1,6 +1,7 @@
 { lib }:
 let
-  inherit (builtins) elem stringLength substring head tail length;
+  inherit (builtins) elem stringLength substring head tail length
+    concatLists;
   inherit (lib.strings) lowerChars upperChars stringToCharacters;
   inherit (lib.lists) foldl;
 in
@@ -25,14 +26,19 @@ rec {
 
   sp = start: len: { inherit start len; };
 
-  spToString = { start, len }: substring start len;
-
-  # Type: int -> StringPos -> StringPos
+  spToString = buf: { start, len }: substring start len buf;
 
   pStringSp = string: inp:
     let len = stringLength string; in
-    if substring inp.pos len == string then
+    if substring inp.pos len inp.buf == string then
       success (sp inp.pos len) (advance len inp)
+    else
+      failure "literal string ${string}" inp;
+
+  pStringStr = string: inp:
+    let len = stringLength string; in
+    if substring inp.pos len inp.buf == string then
+      success string (advance len inp)
     else
       failure "literal string ${string}" inp;
 
@@ -42,6 +48,32 @@ rec {
     else
       failure "literal char ${char}" inp;
 
+  pCharStr = char: inp:
+    if charAt inp.pos inp.buf == char then
+      success char (advance 1 inp)
+    else
+      failure "literal char ${char}" inp;
+
+  pSatisfiesSp = cond: inp:
+    if cond (charAt inp.pos inp.buf) then
+      success (sp inp.pos 1) (advance 1 inp)
+    else
+      failure "char not satisfactory" inp;
+
+  pSatisfiesStr = cond: inp:
+    let c = charAt inp.pos inp.buf; in
+    if cond c then
+      success c (advance 1 inp)
+    else
+      failure "char not satisfactory" inp;
+  
+  pSatisfiesLengthStr = n: cond: inp:
+    let str = substring inp.pos n inp.buf; in
+    if cond str then
+      success str (advance n inp)
+    else
+      failure "char not satisfactory" inp;
+  
   pStringWhileSp = cond: condName: inp:
     let
       start = inp.pos;
@@ -55,6 +87,9 @@ rec {
           else success (sp start len) inp;
     in
     continue inp;
+  
+  pStringWhileStr = cond: condName: inp:
+    pMap ({ start, len }: substring start len inp.buf) (pStringWhileSp cond condName) inp;
 
   catSp = a1: a2: sp a1.start (a1.len + a2.len);
 
@@ -68,6 +103,8 @@ rec {
     in
     continue initial inp;
 
+  pManyList = pManyGeneric (a: b: concatLists [ a [ b ] ]) [ ];
+
   pManySp = pManyGeneric catSp (sp 0 0);
 
   pOr = p1: p2: inp:
@@ -77,25 +114,59 @@ rec {
     else
       p2 inp;
 
+  pChoose = ps: inp:
+    let continue = ps:
+      if length ps == 0 then
+        failure "Choose item not found" inp
+      else
+        let res = (head ps) inp; in
+        if res.isOk then
+          res
+        else
+          continue (tail ps);
+    in
+    continue ps;
+
   pOption = default: p: inp:
     let res = p inp; in
     if res.isOk then res
     else success default inp;
 
+  pOptionSp = p: inp: pOption (sp inp.pos 0) p inp;
+
   pBind = p: f: inp:
     let res = p inp; in
     if res.isOk then f res.v res.inp else res;
 
-  pSeqSp = ps: inp:
-    let continue = ps: v: inp:
-      if length ps == 0 then
-        success v inp
-      else
-        let res = (head ps) inp; in
-        if res.isOk then
-          continue (tail ps) (catSp v res.v) res.inp
+  pConst = c: pMap (x: c);
+
+  pSeqGeneric = combine: initial: ps: inp:
+    let
+      continue = ps: v: inp:
+        if length ps == 0 then
+          success v inp
         else
-          res;
+          let res = (head ps) inp; in
+          if res.isOk then
+            continue (tail ps) (combine v res.v) res.inp
+          else
+            res;
     in
-    continue ps (sp 0 0) inp;
+    continue ps initial inp;
+
+  pSeqList = pSeqGeneric (a: b: concatLists [ a [ b ] ]) [ ];
+
+  pSeqStr = pSeqGeneric (a: b: a + b) "";
+
+  pSeqSp = ps: inp: pSeqGeneric catSp (sp inp.pos 0) ps inp;
+
+  pMap = f: p: inp:
+    let res = p inp; in
+    if res.isOk then
+      success (f res.v) res.inp
+    else
+      res;
+
+  isAlpha = c: elem c lowerChars || elem c upperChars;
+  isDigit = c: elem c (stringToCharacters "0123456789");
 }

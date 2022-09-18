@@ -4,8 +4,6 @@ let
   inherit (builtins) elem;
   inherit (lib.strings) lowerChars upperChars stringToCharacters;
 
-  isAlpha = c: elem c lowerChars || elem c upperChars;
-  isDigit = c: elem c (stringToCharacters "0123456789");
   isDash = c: c == "_" || c == "-";
 
   pDigitOrDash = pStringWhileSp (c: isDigit c || isDash c) "digit-or-dash";
@@ -16,9 +14,9 @@ let
     "alphanumeric-or-dash";
 
   pId = pSeqSp [
-    (pOption (sp 0 0) pDigitOrDash)
+    (pOptionSp pDigitOrDash)
     pAlpha
-    (inp: pOption (sp inp.pos 0) pAlphaNumericOrDash inp)
+    (pOptionSp pAlphaNumericOrDash)
   ];
 
   pIdOrUnderscore = pOr pId (pCharSp "_");
@@ -31,6 +29,6 @@ in
   pIdent = pSeqSp [
     pIdOrUnderscore
     (pManySp pPlusId)
-    (inp: pOption (sp inp.pos 0) pColonId inp)
+    (pOptionSp pColonId)
   ];
 }
